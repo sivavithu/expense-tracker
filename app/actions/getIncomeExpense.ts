@@ -1,35 +1,36 @@
-'use server'
-import { db } from "@/lib/db";
+'use server';
+import { db } from '@/lib/db';
 import { auth } from '@clerk/nextjs/server';
-import IncomeExpense from '../../components/IncomeExpense';
 
+async function getIncomeExpense(): Promise<{
+  income?: number;
+  expense?: number;
+  error?: string;
+}> {
+  // Await the result of auth()
+  const { userId } = await auth();
 
+  if (!userId) {
+    return { error: 'User not logged in' };
+  }
 
-async function getIncomeExpense():Promise <{
-    income?:number;
-    expense?:number;
-    error?:string;
-    
-}>{
-    const userId=await auth();
+  try {
+    // Fetch transactions filtered by userId
+    const transactions = await db.transactions.findMany({
+      where: { userId },
+    });
 
-    if(!userId){
-        return {error:'User not logged in'}
-    }
+    // Calculate income and expense
+    const amounts = transactions.map((transaction) => transaction.amount);
+    const income = amounts.filter((item) => item > 0).reduce((acc, item) => acc + item, 0);
+    const expense = amounts.filter((item) => item < 0).reduce((acc, item) => acc + item, 0);
 
-    try{
-        const transactions=await db.transactions.findMany({
-            where:{userId}
-        })
-        const amounts=transactions.map((transaction)=>transaction.amount);
-        const income=amounts.filter((item)=>item>0).reduce((acc,item)=>acc+item,0)
-        const expense=amounts.filter((item)=>item<0).reduce((acc,item)=>acc+item,0)
-        console.log(income,expense)
-        return {income,expense:Math.abs(expense)};
-    }
-    catch(error){
-        return {error:error}
-    }
+    console.log(income, expense);
+    return { income, expense: Math.abs(expense) };
+  } catch (error: unknown) {
+    // Safely handle error
+    return { error: error instanceof Error ? error.message : 'An unknown error occurred' };
+  }
 }
 
 export default getIncomeExpense;

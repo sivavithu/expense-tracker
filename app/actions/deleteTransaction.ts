@@ -24,8 +24,9 @@ async function deleteTransaction(transactionId: string): Promise<{
     revalidatePath('/');
 
     return { message: 'Transaction deleted' };
-  } catch (error) {
-    return { error: error };
+  } catch (error: unknown) {
+    // Cast error to a string, or provide a fallback message
+    return { error: error instanceof Error ? error.message : 'An unknown error occurred' };
   }
 }
 

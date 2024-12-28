@@ -1,33 +1,33 @@
-'use server'
+'use server';
 import { db } from "@/lib/db";
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server";
 import { Transaction } from '../../types/Transaction';
 
+async function getTransactions(): Promise<{
+  transactions?: Transaction[];
+  error?: string;
+}> {
+  // Await and destructure userId from auth
+  const { userId } = await auth();
 
+  if (!userId) {
+    return { error: 'User not logged in' };
+  }
 
-async function getTransactions():Promise <{
-    transaction?:Transaction[];
-    error?:string;
-    
-}>{
-    const userId=auth();
+  try {
+    // Use the extracted userId in the query
+    const transactions = await db.transactions.findMany({
+      where: { userId },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
 
-    if(!userId){
-        return {error:'User not logged in'}
-    }
-
-    try{
-        const transactions=await db.transactions.findMany({
-            where:{userId},
-            orderBy:{
-                createdAt:'desc',
-            }
-        })
-       
-        return {transactions}
-    }
-    catch(error){
-        return {error:error}
-    }
+    return { transactions };
+  } catch (error: unknown) {
+    // Handle errors safely
+    return { error: error instanceof Error ? error.message : 'An unknown error occurred' };
+  }
 }
+
 export default getTransactions;
